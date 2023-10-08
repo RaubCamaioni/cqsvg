@@ -1,0 +1,4 @@
+{
+    "editor.formatOnSave": true,
+    "editor.defaultFoldingRangeProvider": "ms-python.black-formatter"
+}

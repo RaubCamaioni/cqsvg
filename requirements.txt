@@ -1,0 +1,2 @@
+shapely
+git+https://github.com/RaubCamaioni/svgpath.git
