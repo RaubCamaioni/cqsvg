@@ -44,15 +44,15 @@ def main(svg_file: Path):
 
     face_solids = [loftz(f.translate((0, 0, 0.01)), -0.1) for f in faces]
     back_place = cq.Workplane("XY").rect(1, 1).extrude(-0.12)
-    solid = reduce(cut, face_solids, back_place)
+    solid = reduce(cut, face_solids, back_place).rotate((0,0,0), (0,0,1), 180)
 
     stl_file = f"stl_files/{'{}'}_{int(time.time())}_{svg_file.stem}.stl"
 
     cq.exporters.export(solid, stl_file.format("solid"))
     cq.exporters.export(cq.Compound.makeCompound(faces), stl_file.format("face"))
 
-    # show_object(solid, name="solid")
-    # show_object(faces, name="faces")
+    show_object(solid, name="solid")
+    show_object(faces, name="faces")
 
 
 def cqeditor():
