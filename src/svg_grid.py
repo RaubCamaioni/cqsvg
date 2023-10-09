@@ -4,7 +4,7 @@ from pathlib import Path
 import cadquery as cq
 import time
 
-from cqsvg import svg_pattern
+from cq_svg import svg_pattern
 from functools import reduce
 
 _show = globals().get("show_object", lambda *args, **kwargs: print("show disabled"))

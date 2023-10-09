@@ -30,6 +30,7 @@ def print_hierarchy(shape: Shape, depth=0):
 
 
 def contained_hierarchy(parent: Shape, children: List[Shape], processed: List[Shape]):
+    """recursive creation of hierarchy"""
     for i, child_candidate in enumerate(children):
         if child_candidate in processed:
             continue
@@ -41,6 +42,7 @@ def contained_hierarchy(parent: Shape, children: List[Shape], processed: List[Sh
 
 
 def build_hierarchy(points: List[List[Tuple[float, float]]]) -> List[Shape]:
+    """build tree of shapes, shapes that are inside other shapes are child shapes"""
     shapes: List[Shape] = [Shape(Polygon(p), p, None, []) for p in points]
     shapes = sorted(shapes, key=lambda s: -s.shapely.area)
     processed: List = []
@@ -50,19 +52,23 @@ def build_hierarchy(points: List[List[Tuple[float, float]]]) -> List[Shape]:
 
 
 def build_faces(shapes: List[Shape]):
-    faces: List[Face] = []
-    for shape in shapes:
-        outer = shape.points
-        inner = [c.points for c in shape.children]
-        faces.append(Face(outer, inner))
-        for s in shape.children:
-            build_faces(s.children)
+    """build hierarchy of shapes mod2: inner.inner shapes are treated as a new independent shape"""
+    faces = []
+    def build(shapes, faces):
+        for shape in shapes:
+            outer = shape.points
+            inner = [c.points for c in shape.children]
+            faces.append(Face(outer, inner))
+            for s in shape.children:
+                build(s.children, faces)
+    build(shapes, faces)
     return faces
 
 
 def seperate_line_shape(
     paths: List[List[Tuple[float, float]]]
 ) -> Tuple[List[Tuple[float, float]], List[Tuple[float, float]]]:
+    """seperate paths into lines and closed shapes"""
     lines = []
     polygons = []
     for points in paths:
@@ -101,13 +107,13 @@ def lines_shapes_svg(
     lines, polygons = seperate_line_shape(point_paths)
     hierarchy = build_hierarchy(polygons)
     faces = build_faces(hierarchy)
-
     return lines, faces
 
 
 def remove_duplicates(points: Tuple[float, float]):
+    """removes sequential duplicate points"""
     diff = np.linalg.norm(np.diff(points, axis=0), axis=1) > small_number
-    mask = np.concatenate([[True], diff])
+    mask = np.concatenate([diff, [True]])
     return points[mask]
 
 
@@ -137,12 +143,14 @@ def svg_pattern(
     density: float = 100,
     repeat: Tuple[float, float] = (1, 1),
     thickness: float = 0.1,
+    lines_enabled: bool = False,
 ) -> list[cqFace]:
     adjusted_scale = (scale[0] / repeat[0], scale[1] / repeat[1])
     lines, faces = lines_shapes_svg(file, density, scale=adjusted_scale)
 
     faces = [Face2Face(f) for f in faces]
-    faces.extend(line_offset(l, thickness) for l in lines)
+    if lines_enabled:
+        faces.extend(line_offset(l, thickness) for l in lines)
 
     bb = adjusted_scale
     lop_left_x = -bb[0] / 2 * (repeat[0] - 1)
