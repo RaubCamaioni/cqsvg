@@ -1,5 +1,6 @@
 from cadquery.occ_impl.shapes import Wire, Face as cqFace
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
+from shapely.ops import polygonize, unary_union
 from dataclasses import dataclass
 from svgpath import transforms
 from typing import List, Tuple
@@ -54,6 +55,7 @@ def build_hierarchy(points: List[List[Tuple[float, float]]]) -> List[Shape]:
 def build_faces(shapes: List[Shape]):
     """build hierarchy of shapes mod2: inner.inner shapes are treated as a new independent shape"""
     faces = []
+
     def build(shapes, faces):
         for shape in shapes:
             outer = shape.points
@@ -61,6 +63,7 @@ def build_faces(shapes: List[Shape]):
             faces.append(Face(outer, inner))
             for s in shape.children:
                 build(s.children, faces)
+
     build(shapes, faces)
     return faces
 
@@ -77,13 +80,26 @@ def seperate_line_shape(
         if len(points) < 3:
             lines.append(points)
         else:
-            p = Polygon(points)
-            area = p.area > small_number
-            closed = np.linalg.norm(points[0] - points[-1]) < small_number
-            if area and closed:
-                polygons.append(points)
-            else:
-                lines.append(points)
+            lineString = LineString(points)
+            unary = unary_union(lineString)
+            sub_poly: List[Polygon] = list(polygonize(unary))
+            total_ara = sum([p.area for p in sub_poly])
+
+            for p in sub_poly:
+                poly_points = p.exterior.coords
+                pa = p.area
+
+                if pa < total_ara * 0.01:
+                    continue
+
+                area = p.area > small_number
+                closed = np.linalg.norm(points[0] - points[-1]) < small_number
+
+                if area and closed:
+                    polygons.append(poly_points)
+                else:
+                    lines.append(poly_points)
+
     return lines, polygons
 
 
@@ -147,11 +163,9 @@ def svg_pattern(
 ) -> list[cqFace]:
     adjusted_scale = (scale[0] / repeat[0], scale[1] / repeat[1])
     lines, faces = lines_shapes_svg(file, density, scale=adjusted_scale)
-
     faces = [Face2Face(f) for f in faces]
     if lines_enabled:
         faces.extend(line_offset(l, thickness) for l in lines)
-
     bb = adjusted_scale
     lop_left_x = -bb[0] / 2 * (repeat[0] - 1)
     lop_left_y = -bb[1] / 2 * (repeat[1] - 1)

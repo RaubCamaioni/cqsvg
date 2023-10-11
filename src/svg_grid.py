@@ -1,4 +1,5 @@
 from cadquery import Solid, Face
+from cadquery.occ_impl import shapes
 from typing import List
 from pathlib import Path
 import cadquery as cq
@@ -34,23 +35,29 @@ def main(svg_file: Path):
     scale = (0.9, 0.9)
     tile = (1, 1)
 
+    print("creating faces")
     faces = svg_pattern(
         svg_file,
         scale=scale,
-        density=10,
+        density=4,
         repeat=tile,
         thickness=0.01,
     )
 
-    face_solids = [loftz(f.translate((0, 0, 0.01)), -0.1) for f in faces]
+    # face_solids = [loftz(f.translate((0, 0, 0.01)), -0.1) for f in faces]
+    print("creating solids")
+    face_solids = [f.translate((0, 0, 0.01)).thicken(0.1) for f in faces]
+
+    print("cuting block")
     back_place = cq.Workplane("XY").rect(1, 1).extrude(-0.12)
-    solid = reduce(cut, face_solids, back_place).rotate((0,0,0), (0,0,1), 180)
+    solid = reduce(cut, face_solids, back_place).rotate((0, 0, 0), (0, 0, 1), 180)
 
     stl_file = f"stl_files/{'{}'}_{int(time.time())}_{svg_file.stem}.stl"
 
     cq.exporters.export(solid, stl_file.format("solid"))
     cq.exporters.export(cq.Compound.makeCompound(faces), stl_file.format("face"))
 
+    print("display")
     show_object(solid, name="solid")
     show_object(faces, name="faces")
 
@@ -58,7 +65,7 @@ def main(svg_file: Path):
 def cqeditor():
     import traceback
 
-    svg_file = "patterns/blobs.svg"
+    svg_file = Path("/workspaces/cqsvg/patterns/blobs.svg")
     try:
         main(svg_file)
     except Exception as e:

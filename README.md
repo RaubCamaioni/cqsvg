@@ -45,4 +45,4 @@ Blobs: viewer.html used
 Holes are present in meshlab render.  
 ![Alt text](images/blobs.jpg)  
 ![Alt text](images/blobs_3d.jpg)  
-![Alt text](images/blobs_meshlab.jpg)  
+![Alt text](images/blobs_meshlab.jpg)
