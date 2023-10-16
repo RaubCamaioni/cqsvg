@@ -6,6 +6,7 @@ from svgpath import transforms
 from typing import List, Tuple
 import numpy as np
 import svgpath
+from itertools import product
 
 small_number = 1e-10
 
@@ -73,7 +74,7 @@ def seperate_line_shape(
 ) -> Tuple[List[Tuple[float, float]], List[Tuple[float, float]]]:
     """seperate paths into lines and closed shapes"""
     lines = []
-    polygons = []
+    faces = []
     for points in paths:
         if len(points) <= 1:
             continue
@@ -82,10 +83,10 @@ def seperate_line_shape(
         else:
             lineString = LineString(points)
             unary = unary_union(lineString)
-            sub_poly: List[Polygon] = list(polygonize(unary))
-            total_ara = sum([p.area for p in sub_poly])
+            polygons: List[Polygon] = list(polygonize(unary))
+            total_ara = sum([p.area for p in polygons])
 
-            for p in sub_poly:
+            for p in polygons:
                 poly_points = p.exterior.coords
                 pa = p.area
 
@@ -96,11 +97,11 @@ def seperate_line_shape(
                 closed = np.linalg.norm(points[0] - points[-1]) < small_number
 
                 if area and closed:
-                    polygons.append(poly_points)
+                    faces.append(poly_points)
                 else:
                     lines.append(poly_points)
 
-    return lines, polygons
+    return lines, faces
 
 
 def lines_shapes_svg(
@@ -171,13 +172,18 @@ def svg_pattern(
     lop_left_y = -bb[1] / 2 * (repeat[1] - 1)
     abs_padding_x = bb[0]
     abs_padding_y = bb[1]
-    xo = lambda z: lop_left_x + abs_padding_x * z
-    yo = lambda z: lop_left_y + abs_padding_y * z
 
     lfaces = []
-    for i in range(repeat[0]):
-        for j in range(repeat[1]):
-            for face in faces:
-                lfaces.append(face.translate((xo(i), yo(j), 0)))
+    for i, j in product(range(repeat[0]), range(repeat[1])):
+        for face in faces:
+            lfaces.append(
+                face.translate(
+                    (
+                        lop_left_x + abs_padding_x * i,
+                        lop_left_y + abs_padding_y * j,
+                        0,
+                    )
+                )
+            )
 
     return lfaces

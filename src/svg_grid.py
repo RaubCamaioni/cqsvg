@@ -39,7 +39,7 @@ def main(svg_file: Path):
     faces = svg_pattern(
         svg_file,
         scale=scale,
-        density=4,
+        density=10,
         repeat=tile,
         thickness=0.01,
     )
@@ -52,12 +52,14 @@ def main(svg_file: Path):
     back_place = cq.Workplane("XY").rect(1, 1).extrude(-0.12)
     solid = reduce(cut, face_solids, back_place).rotate((0, 0, 0), (0, 0, 1), 180)
 
-    stl_file = f"stl_files/{'{}'}_{int(time.time())}_{svg_file.stem}.stl"
+    stl_file = (
+        f"/workspaces/cqsvg/stl_files/{'{}'}_{int(time.time())}_{svg_file.stem}.stl"
+    )
+    print(stl_solid := stl_file.format("solid"))
+    print(stl_face := stl_file.format("face"))
+    cq.exporters.export(solid, stl_solid)
+    cq.exporters.export(cq.Compound.makeCompound(faces), stl_face)
 
-    cq.exporters.export(solid, stl_file.format("solid"))
-    cq.exporters.export(cq.Compound.makeCompound(faces), stl_file.format("face"))
-
-    print("display")
     show_object(solid, name="solid")
     show_object(faces, name="faces")
 
